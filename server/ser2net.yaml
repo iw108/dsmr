@@ -1,10 +1,16 @@
 connection: &con0096
-    accepter: tcp,2001
+    accepter: [
+      tcp,
+      2001
+    ]
     enable: on
     options:
       banner: *banner
       kickolduser: true
       telnet-brk-on-sync: true
-    connector: serialdev,
-              /dev/ttyUSB0,
-              115200n81,local
+    connector: [
+      serialdev,
+      /dev/ttyUSB0,
+      115200n81,
+      local
+    ]
