@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  ser2net:
+    container_name: ser2net
+    image: ghcr.io/jippi/docker-ser2net
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ser2net.yaml:/etc/ser2net/ser2net.yaml
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
