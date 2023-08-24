@@ -1,13 +1,15 @@
 import asyncio
-from contextlib import asynccontextmanager
+import logging
 import signal
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator, AsyncIterator
 
 from dsmr_parser.clients.telegram_buffer import TelegramBuffer
 
+LOGGER = logging.getLogger(__name__)
+
 
 class TelegramStreamer:
-
     BUFFER_SIZE = 256
 
     def __init__(
@@ -23,31 +25,29 @@ class TelegramStreamer:
 
     async def _waiter(self) -> None:
         await self.event.wait()
-    
+
     async def _read(self) -> str:
         data = await self.reader.read(self.BUFFER_SIZE)
         return data.decode()
 
     async def __aiter__(self) -> AsyncIterator[str]:
-
         while not self.event.is_set():
-
             read_task = asyncio.create_task(self._read())
             waiter_task = asyncio.create_task(self._waiter())
 
             done, _ = await asyncio.wait(
-                (read_task, waiter_task), 
+                (read_task, waiter_task),
                 return_when=asyncio.FIRST_COMPLETED,
             )
 
             if read_task in done:
                 self.buffer.append(read_task.result())
                 for raw_telegram in self.buffer.get_all():
+                    LOGGER.debug("Received telegram")
                     yield raw_telegram
 
 
 def get_cancellation_event() -> asyncio.Event:
-
     event = asyncio.Event()
 
     loop = asyncio.get_running_loop()
@@ -58,19 +58,23 @@ def get_cancellation_event() -> asyncio.Event:
 
 @asynccontextmanager
 async def managed_telegram_streamer(
-    cancellation_event: asyncio.Event | None = None,
+    host: str,
+    port: int,
+    _cancellation_event: asyncio.Event | None = None,
 ) -> AsyncGenerator[TelegramStreamer, None]:
-    
-    print("Connecting...")
-    reader, writer = await asyncio.open_connection("localhost", 8888)
-    _cancellation_event = cancellation_event or get_cancellation_event()
+    LOGGER.debug("Opening connection")
 
-    yield TelegramStreamer(reader, event=_cancellation_event)
+    reader, writer = await asyncio.open_connection(host, port)
 
-    print("Closing connection...")
+    LOGGER.debug("Opened connection")
+
+    cancellation_event = _cancellation_event or get_cancellation_event()
+
+    yield TelegramStreamer(reader, event=cancellation_event)
+
+    LOGGER.debug("Closing streamer")
 
     writer.close()
     await writer.wait_closed()
 
-    print("connection closed")
-
+    LOGGER.debug("Closing streamer")

@@ -1,0 +1,10 @@
+ %YAML 1.1
+ ---
+
+connection: &con01
+  accepter: tcp,2001
+  enable: on
+  options:
+    kickolduser: true
+    telnet-brk-on-sync: true
+  connector: serialdev,/dev/ttyUSB0,115200n81,local
