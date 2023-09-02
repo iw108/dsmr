@@ -1,6 +1,5 @@
 import asyncio
 
-
 TELEGRAM = (
     "/ISk5\\2MT382-1000\r\n"
     "\r\n"

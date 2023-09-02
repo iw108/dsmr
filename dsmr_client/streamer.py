@@ -4,7 +4,8 @@ import signal
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, AsyncIterator
 
-from dsmr_parser.clients.telegram_buffer import TelegramBuffer
+from .buffer import TelegramBuffer
+from .telegram import Telegram
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class TelegramStreamer:
         data = await self.reader.read(self.BUFFER_SIZE)
         return data.decode()
 
-    async def __aiter__(self) -> AsyncIterator[str]:
+    async def __aiter__(self) -> AsyncIterator[Telegram]:
         while not self.event.is_set():
             read_task = asyncio.create_task(self._read())
             waiter_task = asyncio.create_task(self._waiter())
@@ -42,9 +43,9 @@ class TelegramStreamer:
 
             if read_task in done:
                 self.buffer.append(read_task.result())
-                for raw_telegram in self.buffer.get_all():
+                for telegram in self.buffer.get_all():
                     LOGGER.debug("Received telegram")
-                    yield raw_telegram
+                    yield telegram
 
 
 def get_cancellation_event() -> asyncio.Event:

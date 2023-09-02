@@ -1,19 +1,18 @@
+from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-from datetime import datetime
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Type
 
-from dsmr_parser import telegram_specifications
-from dsmr_parser.obis_references import CURRENT_ELECTRICITY_USAGE, P1_MESSAGE_TIMESTAMP
-from dsmr_parser.objects import CosemObject
-from dsmr_parser.parsers import Telegram, TelegramParser
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
 from influxdb_client.client.write_api_async import WriteApiAsync
 
 from .consumer import Consumer, managed_consumer
+from .dto import CosemDatetime, DataPoint, MbusDataPoint
+from .obis import ObisCode
 from .settings import Settings
+from .telegram import Telegram
 
 
-class InfluxHandler:
+class AbstractHandler(ABC):
     def __init__(
         self,
         write_api: WriteApiAsync,
@@ -22,34 +21,33 @@ class InfluxHandler:
         self.write_api = write_api
         self.bucket = bucket
 
-    async def __call__(self, telegram: str) -> None:
-        parser = TelegramParser(telegram_specifications.V5)
-        telegram = parser.parse(telegram)
+    @abstractmethod
+    async def __call__(self, telegram: Telegram) -> None:
+        """Handle call."""
 
-        output = self._map_telegram(telegram)
 
-        await self.write_api.write(self.bucket, record=output)
+class InfluxHandler(AbstractHandler):
+    async def __call__(self, telegram: Telegram) -> None:
+        _ = telegram.get_data_point(
+            ObisCode.P1_MESSAGE_TIMESTAMP,
+            DataPoint[CosemDatetime],
+        )
 
-    @staticmethod
-    def _map_telegram(telegram: Telegram) -> dict:
-        data = {"measurement": "dsmr"}
+        energy_usage = next(
+            telegram.get_mbus_data_point(
+                ObisCode.CURRENT_ELECTRICITY_USAGE,
+                MbusDataPoint[float],
+            )
+        )
 
-        timestamp = telegram[P1_MESSAGE_TIMESTAMP]
-        if isinstance(timestamp, CosemObject) and isinstance(timestamp.value, datetime):
-            data["time"] = timestamp.value.isoformat()
-
-        electricity_usage = telegram[CURRENT_ELECTRICITY_USAGE]
-        if isinstance(electricity_usage, CosemObject):
-            data["fields"] = {
-                "electricity_usage": float(electricity_usage.value),
-            }
-
-        return data
+        # print(energy_usage)
 
 
 @asynccontextmanager
 async def managed_influxdb_consumer(
     settings: Settings,
+    *,
+    _handler_cls: Type[AbstractHandler] = InfluxHandler,
 ) -> AsyncGenerator[Consumer, None]:
     influxdb_client = InfluxDBClientAsync(
         url=str(settings.INFLUXDB_URL),
@@ -58,7 +56,7 @@ async def managed_influxdb_consumer(
     )
 
     async with influxdb_client:
-        handler = InfluxHandler(
+        handler = _handler_cls(
             influxdb_client.write_api(),
             settings.INFLUXDB_BUCKET,
         )
