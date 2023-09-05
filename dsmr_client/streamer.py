@@ -70,6 +70,7 @@ async def managed_telegram_streamer(
     LOGGER.debug("Opened connection")
 
     cancellation_event = _cancellation_event or get_cancellation_event()
+    
 
     yield TelegramStreamer(reader, event=cancellation_event)
 

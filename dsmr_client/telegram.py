@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass
 from typing import Generator, Type
+from uuid import uuid4
 
 from .dto import CosemDatetime, DataPoint, DataT, MbusDataPoint
 from .obis import ObisCode
@@ -28,8 +29,9 @@ class _TelegramEntry:
 
 
 class Telegram:
-    def __init__(self, data: str):
+    def __init__(self, data: str, *, _id: str | None = None):
         self._data = data
+        self.id = _id or uuid4().hex[:6]
 
     def _get_entry(
         self,
@@ -53,7 +55,7 @@ class Telegram:
 
         return target_cls(**raw_data_point.__dict__)
 
-    def get_mbus_data_point(
+    def get_mbus_data_points(
         self,
         obis_code: ObisCode,
         target_cls: Type[MbusDataPoint[DataT]],

@@ -2,7 +2,6 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Awaitable, Callable
-from uuid import uuid4
 
 from .telegram import Telegram
 
@@ -17,15 +16,13 @@ async def default_handler(_: Telegram):
 
 
 async def worker(
-    queue: asyncio.Queue,
+    queue: asyncio.Queue[Telegram],
     handler: HandlerT,
 ):
     while True:
-        telegram: Telegram = await queue.get()
+        telegram = await queue.get()
 
-        telegram_id = uuid4().hex[:6]
-
-        LOGGER.debug("Processing telegram: %s", telegram_id)
+        LOGGER.debug("Processing telegram: %s", telegram.id)
 
         try:
             await handler(telegram)
@@ -34,11 +31,11 @@ async def worker(
 
         queue.task_done()
 
-        LOGGER.debug("Processed telegram: %s", telegram_id)
+        LOGGER.debug("Processed telegram: %s", telegram.id)
 
 
-class Consumer:
-    def __init__(self, queue: asyncio.Queue):
+class ConsumerQueue:
+    def __init__(self, queue: asyncio.Queue[Telegram]):
         self._queue = queue
 
     def add(self, telegram: Telegram):
@@ -49,16 +46,16 @@ class Consumer:
 async def managed_consumer(
     handler: HandlerT = default_handler,
     *,
-    _queue: asyncio.Queue | None = None,
-) -> AsyncGenerator[Consumer, None]:
+    _queue: asyncio.Queue[Telegram] | None = None,
+) -> AsyncGenerator[ConsumerQueue, None]:
     LOGGER.debug("Starting consumer")
 
-    queue = _queue or asyncio.Queue()
+    queue = _queue or asyncio.Queue[Telegram]()
     worker_task = asyncio.create_task(worker(queue, handler))
 
     LOGGER.debug("Started consumer")
 
-    yield Consumer(queue)
+    yield ConsumerQueue(queue)
 
     LOGGER.debug("Stopping consumer.")
 

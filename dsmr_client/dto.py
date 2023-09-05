@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Annotated, Generic, TypeVar
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel
 from pydantic.functional_validators import BeforeValidator
@@ -17,7 +18,12 @@ class MbusDataPoint(DataPoint[DataT]):
 
 
 def parse_datetime(data: str):
-    return datetime.strptime(data[:-1], "%y%m%d%H%M%S")
+    timezone = ZoneInfo("Europe/Amsterdam")
+
+    naive = datetime.strptime(data[:-1], "%y%m%d%H%M%S")
+    aware = naive.replace(tzinfo=timezone)
+    
+    return aware
 
 
 CosemDatetime = Annotated[datetime, BeforeValidator(parse_datetime)]

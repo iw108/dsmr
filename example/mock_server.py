@@ -55,7 +55,7 @@ async def connection_callback(
             for index in range(0, len(telegram), 256):
                 writer.write(telegram[index : index + 256])
                 await writer.drain()
-            asyncio.sleep(1)
+            await asyncio.sleep(1)
     finally:
         writer.close()
         await writer.wait_closed()
