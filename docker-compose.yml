@@ -1,6 +1,19 @@
 version: "3.8"
 
 services:
+  dsmr_client:
+    build: .
+    image: dsmr_client
+    environment:
+      - TCP_HOST
+      - TCP_PORT
+      - INFLUXDB_BUCKET
+      - INFLUXDB_ORG
+      - INFLUXDB_TOKEN
+      - INFLUXDB_URL=http://influxdb:8086
+    depends_on:
+      - influxdb
+
   influxdb:
     image: influxdb:2.7
     environment:
@@ -11,9 +24,30 @@ services:
       - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET}
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
     ports:
-      - 127.0.0.1:8086:8086
+      - 8086:8086
+    healthcheck:
+      test: ["influxdb", "ping"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
     volumes:
-      - influx_data:/var/lib/influxdb2
+      - influxdb_data:/var/lib/influxdb2
+
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+
 
 volumes:
-  influx_data:
+  influxdb_data:
+  grafana_data:
+

@@ -34,6 +34,7 @@ class AbstractHandler(ABC):
 
 
 class InfluxDBHandler(AbstractHandler):
+
     async def __call__(self, telegram: Telegram) -> None:
         
         timestamp = telegram.get_data_point(
@@ -41,19 +42,37 @@ class InfluxDBHandler(AbstractHandler):
             DataPoint[CosemDatetime],
         )
 
-        energy_usage = telegram.get_data_point(
+        current_usage = telegram.get_data_point(
             ObisCode.CURRENT_ELECTRICITY_USAGE,
             DataPoint[float],
         )
 
+        used_offpeak = telegram.get_data_point(
+            ObisCode.ELECTRICITY_USED_TARIFF_1,
+            DataPoint[float],
+        )
+
+        used_peak = telegram.get_data_point(
+            ObisCode.ELECTRICITY_USED_TARIFF_2,
+            DataPoint[float],
+        )
+
+        active_tariff = telegram.get_data_point(
+            ObisCode.ELECTRICITY_ACTIVE_TARIFF,
+            DataPoint[int],
+        )
+
         data = {
-            "measurement": "dsmr",
-            "tags": {"unit": energy_usage.unit},
-            "fields": {"current_energy_usage": energy_usage.value},
+            "measurement": "electricity",
+            "fields": {
+                "current_usage": current_usage.value,
+                "used_peak": used_offpeak.value,
+                "used_offpeak": used_peak.value,
+                "active_tariff": active_tariff.value,
+
+            },
             "time": timestamp.value.isoformat(),
         }
-
-        self.write_api.wri
 
         await self.write_api.write(self.bucket, record=data)
 
