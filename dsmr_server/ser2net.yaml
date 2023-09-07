@@ -2,7 +2,7 @@
  ---
 
 connection: &con01
-  accepter: tcp,2001
+  accepter: tcp,1234
   enable: on
   options:
     kickolduser: true

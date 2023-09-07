@@ -26,7 +26,7 @@ services:
     ports:
       - 8086:8086
     healthcheck:
-      test: ["influxdb", "ping"]
+      test: ["CMD", "influxdb", "ping"]
       interval: 1m30s
       timeout: 30s
       retries: 5
@@ -38,12 +38,19 @@ services:
     image: grafana/grafana-enterprise
     container_name: grafana
     restart: unless-stopped
+    links:
+      - influxdb
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - INFLUXDB_BUCKET
+      - INFLUXDB_ORG
+      - INFLUXDB_TOKEN
     ports:
       - 3000:3000
     volumes:
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
       - grafana_data:/var/lib/grafana
 
 
