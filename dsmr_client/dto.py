@@ -22,7 +22,7 @@ def parse_datetime(data: str):
 
     naive = datetime.strptime(data[:-1], "%y%m%d%H%M%S")
     aware = naive.replace(tzinfo=timezone)
-    
+
     return aware
 
 

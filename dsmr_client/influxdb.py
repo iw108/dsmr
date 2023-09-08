@@ -34,9 +34,7 @@ class AbstractHandler(ABC):
 
 
 class InfluxDBHandler(AbstractHandler):
-
     async def __call__(self, telegram: Telegram) -> None:
-        
         timestamp = telegram.get_data_point(
             ObisCode.P1_MESSAGE_TIMESTAMP,
             DataPoint[CosemDatetime],
@@ -69,7 +67,6 @@ class InfluxDBHandler(AbstractHandler):
                 "used_peak": used_offpeak.value,
                 "used_offpeak": used_peak.value,
                 "active_tariff": active_tariff.value,
-
             },
             "time": timestamp.value.isoformat(),
         }

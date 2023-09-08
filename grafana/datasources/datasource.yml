@@ -14,4 +14,3 @@ datasources:
     secureJsonData:
       token: ${INFLUXDB_TOKEN}
     editable: false
-
