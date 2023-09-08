@@ -1,1 +1,1 @@
-![Static analysis](https://github.com/iw108/dsmr/actions/workflows/main.yml/badge.svg?branch=main)
+![Static analysis](https://github.com/iw108/dsmr/actions/workflows/main.yaml/badge.svg?branch=main)
