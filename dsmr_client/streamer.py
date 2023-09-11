@@ -18,7 +18,7 @@ class TelegramStreamer:
         reader: asyncio.StreamReader,
         *,
         event: asyncio.Event | None = None,
-        _buffer: TelegramBuffer | None = None
+        _buffer: TelegramBuffer | None = None,
     ):
         self.reader = reader
         self.event = event or asyncio.Event()
@@ -61,21 +61,22 @@ def get_cancellation_event() -> asyncio.Event:
 async def managed_telegram_streamer(
     host: str,
     port: int,
+    *,
     _cancellation_event: asyncio.Event | None = None,
 ) -> AsyncGenerator[TelegramStreamer, None]:
     LOGGER.debug("Opening connection")
 
     reader, writer = await asyncio.open_connection(host, port)
 
-    LOGGER.debug("Opened connection")
+    LOGGER.info("Opened connection")
 
     cancellation_event = _cancellation_event or get_cancellation_event()
 
     yield TelegramStreamer(reader, event=cancellation_event)
 
-    LOGGER.debug("Closing streamer")
+    LOGGER.info("Closing streamer")
 
     writer.close()
     await writer.wait_closed()
 
-    LOGGER.debug("Closing streamer")
+    LOGGER.info("Closed streamer")

@@ -6,7 +6,7 @@ from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
 from influxdb_client.client.write_api_async import WriteApiAsync
 from pydantic import AnyHttpUrl
 
-from .consumer import ConsumerQueue, managed_consumer
+from .consumer import Consumer
 from .dto import CosemDatetime, DataPoint
 from .obis import ObisCode
 from .telegram import Telegram
@@ -79,7 +79,7 @@ async def managed_influxdb_consumer(
     config: InfluxDBConfig,
     *,
     _handler_cls: Type[AbstractHandler] = InfluxDBHandler,
-) -> AsyncGenerator[ConsumerQueue, None]:
+) -> AsyncGenerator[Consumer, None]:
     influxdb_client = InfluxDBClientAsync(
         url=str(config.INFLUXDB_URL),
         token=config.INFLUXDB_TOKEN,
@@ -92,5 +92,5 @@ async def managed_influxdb_consumer(
             config.INFLUXDB_BUCKET,
         )
 
-        async with managed_consumer(handler) as worker_manager:
-            yield worker_manager
+        async with Consumer(handler) as consumer:
+            yield consumer

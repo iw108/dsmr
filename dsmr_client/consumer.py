@@ -1,65 +1,55 @@
 import asyncio
 import logging
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Awaitable, Callable
+from typing import Awaitable, Callable
 
+from .streamer import TelegramStreamer
 from .telegram import Telegram
 
 LOGGER = logging.getLogger(__name__)
 
 
-HandlerT = Callable[[Telegram], Awaitable[None]]
+class Consumer:
+    worker_task: asyncio.Task
 
+    def __init__(
+        self,
+        handler: Callable[[Telegram], Awaitable[None]],
+        *,
+        _queue: asyncio.Queue[Telegram] | None = None,
+    ):
+        self.handler = handler
+        self.queue = _queue or asyncio.Queue[Telegram](maxsize=20)
 
-async def default_handler(_: Telegram):
-    pass
+    async def _worker(self):
+        while True:
+            telegram = await self.queue.get()
 
+            LOGGER.info("Processing telegram: %s", telegram.id)
 
-async def worker(
-    queue: asyncio.Queue[Telegram],
-    handler: HandlerT,
-):
-    while True:
-        telegram = await queue.get()
+            try:
+                await asyncio.wait_for(self.handler(telegram), 10)
+            except Exception as exc:
+                LOGGER.error("Couldn't process telegram: %s", telegram.id, exc_info=exc)
 
-        LOGGER.debug("Processing telegram: %s", telegram.id)
+            self.queue.task_done()
 
-        try:
-            await handler(telegram)
-        except Exception as exc:
-            LOGGER.error("Couldn't process telegram", exc_info=exc)
+            LOGGER.info("Processed telegram: %s", telegram.id)
 
-        queue.task_done()
+    async def consume_stream(self, stream: TelegramStreamer):
+        LOGGER.info("Consuming stream")
 
-        LOGGER.debug("Processed telegram: %s", telegram.id)
+        telegram_count = 0
 
+        async for telegram in stream:
+            if telegram_count == 0:
+                self.queue.put_nowait(telegram)
 
-class ConsumerQueue:
-    def __init__(self, queue: asyncio.Queue[Telegram]):
-        self._queue = queue
+            telegram_count = (telegram_count + 1) % 10
 
-    def add(self, telegram: Telegram):
-        self._queue.put_nowait(telegram)
+    async def __aenter__(self):
+        self.worker_task = asyncio.create_task(self._worker())
+        return self
 
-
-@asynccontextmanager
-async def managed_consumer(
-    handler: HandlerT = default_handler,
-    *,
-    _queue: asyncio.Queue[Telegram] | None = None,
-) -> AsyncGenerator[ConsumerQueue, None]:
-    LOGGER.debug("Starting consumer")
-
-    queue = _queue or asyncio.Queue[Telegram]()
-    worker_task = asyncio.create_task(worker(queue, handler))
-
-    LOGGER.debug("Started consumer")
-
-    yield ConsumerQueue(queue)
-
-    LOGGER.debug("Stopping consumer.")
-
-    await queue.join()
-    worker_task.cancel()
-
-    LOGGER.debug("Stopped consumer.")
+    async def __aexit__(self, *_):
+        await self.queue.join()
+        self.worker_task.cancel()

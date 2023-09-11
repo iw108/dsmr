@@ -1,5 +1,5 @@
- %YAML 1.1
- ---
+%YAML 1.1
+---
 
 connection: &con01
   accepter: tcp,1234
