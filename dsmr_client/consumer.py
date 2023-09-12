@@ -21,6 +21,8 @@ class Consumer:
         self.queue = _queue or asyncio.Queue[Telegram](maxsize=20)
 
     async def _worker(self):
+        LOGGER.info("Starting worker")
+
         while True:
             telegram = await self.queue.get()
 
@@ -42,7 +44,10 @@ class Consumer:
 
         async for telegram in stream:
             if telegram_count == 0:
-                self.queue.put_nowait(telegram)
+                try:
+                    self.queue.put_nowait(telegram)
+                except asyncio.QueueEmpty:
+                    LOGGER.info("Queue full")
 
             telegram_count = (telegram_count + 1) % 10
 

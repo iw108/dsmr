@@ -36,10 +36,13 @@ class TelegramStreamer:
             read_task = asyncio.create_task(self._read())
             waiter_task = asyncio.create_task(self._waiter())
 
-            done, _ = await asyncio.wait(
+            done, pending = await asyncio.wait(
                 (read_task, waiter_task),
                 return_when=asyncio.FIRST_COMPLETED,
             )
+
+            for task in pending:
+                task.cancel()
 
             if read_task in done:
                 self.buffer.append(read_task.result())
