@@ -9,6 +9,7 @@ readme = "README.md"
 python = "^3.10"
 pydantic-settings = "^2.0.3"
 influxdb-client = {extras = ["async"], version = "^1.37.0"}
+tenacity = "^8.2.3"
 
 
 [tool.poetry.group.dev.dependencies]

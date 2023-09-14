@@ -1,71 +1,66 @@
 import asyncio
 import logging
-import signal
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from typing import AsyncGenerator, AsyncIterator
 
 from .buffer import TelegramBuffer
+from .exceptions import ReadTimeout
 from .telegram import Telegram
 
 LOGGER = logging.getLogger(__name__)
 
 
-class TelegramStreamer:
-    BUFFER_SIZE = 256
+@dataclass(frozen=True, kw_only=True)
+class StreamerOptions:
+    """Configurable options for `TelegramStreamer`."""
 
+    buffer_size: int = 256
+    read_timeout: int = 10
+
+
+class TelegramStreamer:
     def __init__(
         self,
         reader: asyncio.StreamReader,
         *,
-        event: asyncio.Event | None = None,
+        streamer_options: StreamerOptions | None = None,
         _buffer: TelegramBuffer | None = None,
     ):
         self.reader = reader
-        self.event = event or asyncio.Event()
+        self.options = streamer_options or StreamerOptions()
         self.buffer = _buffer or TelegramBuffer()
 
-    async def _waiter(self) -> None:
-        await self.event.wait()
+        self._is_streaming: bool = True
 
     async def _read(self) -> str:
-        data = await self.reader.read(self.BUFFER_SIZE)
+        try:
+            data = await asyncio.wait_for(
+                self.reader.read(self.options.buffer_size),
+                self.options.read_timeout,
+            )
+        except asyncio.TimeoutError as exc:
+            LOGGER.info("Read timeout")
+            raise ReadTimeout() from exc
         return data.decode()
 
     async def __aiter__(self) -> AsyncIterator[Telegram]:
-        while not self.event.is_set():
-            read_task = asyncio.create_task(self._read())
-            waiter_task = asyncio.create_task(self._waiter())
+        while self._is_streaming:
+            data = await self._read()
+            self.buffer.append(data)
 
-            done, pending = await asyncio.wait(
-                (read_task, waiter_task),
-                return_when=asyncio.FIRST_COMPLETED,
-            )
+            for telegram in self.buffer.get_all():
+                LOGGER.debug("Received telegram")
+                yield telegram
 
-            for task in pending:
-                task.cancel()
-
-            if read_task in done:
-                self.buffer.append(read_task.result())
-                for telegram in self.buffer.get_all():
-                    LOGGER.debug("Received telegram")
-                    yield telegram
-
-
-def get_cancellation_event() -> asyncio.Event:
-    event = asyncio.Event()
-
-    loop = asyncio.get_running_loop()
-    loop.add_signal_handler(signal.SIGINT, event.set)
-
-    return event
+    def stop(self):
+        self._is_streaming = False
 
 
 @asynccontextmanager
 async def managed_telegram_streamer(
     host: str,
     port: int,
-    *,
-    _cancellation_event: asyncio.Event | None = None,
 ) -> AsyncGenerator[TelegramStreamer, None]:
     LOGGER.debug("Opening connection")
 
@@ -73,13 +68,12 @@ async def managed_telegram_streamer(
 
     LOGGER.info("Opened connection")
 
-    cancellation_event = _cancellation_event or get_cancellation_event()
+    try:
+        yield TelegramStreamer(reader)
+    finally:
+        LOGGER.info("Closing streamer")
 
-    yield TelegramStreamer(reader, event=cancellation_event)
+        writer.close()
+        await writer.wait_closed()
 
-    LOGGER.info("Closing streamer")
-
-    writer.close()
-    await writer.wait_closed()
-
-    LOGGER.info("Closed streamer")
+        LOGGER.info("Closed streamer")

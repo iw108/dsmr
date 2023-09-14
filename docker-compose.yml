@@ -11,8 +11,10 @@ services:
       - INFLUXDB_ORG
       - INFLUXDB_TOKEN
       - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXD_REPORTING_DISABLE=true
     depends_on:
-      - influxdb
+      influxdb:
+        condition: service_healthy
 
   influxdb:
     image: influxdb:2.7
@@ -27,7 +29,7 @@ services:
     ports:
       - 8086:8086
     healthcheck:
-      test: ["CMD", "influxdb", "ping"]
+      test: ["CMD", "influx", "ping"]
       interval: 1m30s
       timeout: 30s
       retries: 5

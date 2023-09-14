@@ -1,10 +1,12 @@
 import asyncio
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 TELEGRAM = (
     "/ISk5\\2MT382-1000\r\n"
     "\r\n"
     "1-3:0.2.8(50)\r\n"
-    "0-0:1.0.0(170102192002W)\r\n"
+    "0-0:1.0.0({timestamp})\r\n"
     "0-0:96.1.1(4B384547303034303436333935353037)\r\n"
     "1-0:1.8.1(000004.426*kWh)\r\n"
     "1-0:1.8.2(000002.399*kWh)\r\n"
@@ -44,14 +46,27 @@ TELEGRAM = (
 )
 
 
+class TelegramGenerator:
+    def __init__(self, zone_info: ZoneInfo):
+        self.zone_info = zone_info
+
+    def __call__(self) -> bytes:
+        now = datetime.now(tz=self.zone_info)
+
+        return TELEGRAM.format(timestamp=now.strftime("%y%m%d%H%M%SS")).encode()
+
+
 async def connection_callback(
     _: asyncio.StreamReader,
     writer: asyncio.StreamWriter,
 ):
-    telegram = TELEGRAM.encode()
+    print("Connection made...")
+
+    telegram_generator = TelegramGenerator(zone_info=ZoneInfo("Europe/Amsterdam"))
 
     try:
         while True:
+            telegram = telegram_generator()
             for index in range(0, len(telegram), 256):
                 writer.write(telegram[index : index + 256])
                 await writer.drain()
@@ -62,8 +77,10 @@ async def connection_callback(
 
 
 async def main():
-    server = await asyncio.start_server(connection_callback, "127.0.0.1", 8888)
-    print("Connected....")
+    server = await asyncio.start_server(
+        connection_callback,
+        port=8888,
+    )
 
     async with server:
         print("Server started.")
