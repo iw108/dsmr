@@ -12,7 +12,7 @@ class TelegramBuffer:
 
         self._regex_pattern = re.compile(self._FIND_TELEGRAMS_REGEX, re.DOTALL)
 
-    def get_all(self) -> Generator[Telegram, None, None]:
+    def drain(self) -> Generator[Telegram, None, None]:
         for telegram in self._regex_pattern.findall(self._buffer):
             self._remove(telegram)
             yield Telegram(telegram)

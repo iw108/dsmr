@@ -12,6 +12,7 @@ LOGGER = logging.getLogger(__name__)
 @dataclass(frozen=True, kw_only=True)
 class ConsumerOptions:
     queue_size: int = 20
+    handler_timeout: float = 10.
 
 
 class Consumer:
@@ -40,7 +41,10 @@ class Consumer:
             LOGGER.info("Processing telegram: %s", telegram.id)
 
             try:
-                await asyncio.wait_for(self.handler(telegram), 10)
+                await asyncio.wait_for(
+                    self.handler(telegram), 
+                    self.options.handler_timeout,
+                )
             except Exception as exc:
                 LOGGER.error("Couldn't process telegram: %s", telegram.id, exc_info=exc)
 

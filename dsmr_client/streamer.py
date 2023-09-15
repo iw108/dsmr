@@ -49,7 +49,7 @@ class TelegramStreamer:
             data = await self._read()
             self.buffer.append(data)
 
-            for telegram in self.buffer.get_all():
+            for telegram in self.buffer.drain():
                 LOGGER.debug("Received telegram")
                 yield telegram
 

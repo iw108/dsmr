@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Generator, Type
 from uuid import uuid4
 
-from .dto import CosemDatetime, DataPoint, DataT, MbusDataPoint
+from .dto import DataPoint, DataT, MbusDataPoint
 from .obis import ObisCode
 
 
