@@ -7,7 +7,7 @@ from influxdb_client.client.write_api_async import WriteApiAsync
 from pydantic import AnyHttpUrl
 
 from .consumer import Consumer
-from .dto import CosemDatetime, DataPoint
+from .dto import CosemDatetime, DataPoint, MbusDataPoint
 from .obis import ObisCode
 from .telegram import Telegram
 
@@ -35,6 +35,31 @@ class AbstractHandler(ABC):
 
 class InfluxDBHandler(AbstractHandler):
     async def __call__(self, telegram: Telegram) -> None:
+        gas_data = self._get_gas_data(telegram)
+        electricity_data = self._get_electricity_data(telegram)
+
+        await self.write_api.write(
+            self.bucket,
+            record=(electricity_data, gas_data),
+        )
+
+    def _get_gas_data(self, telegram: Telegram) -> dict:
+        hourly_gas = next(
+            telegram.get_mbus_data_points(
+                ObisCode.HOURLY_GAS_METER_READING,
+                MbusDataPoint[float],
+            )
+        )
+
+        return {
+            "measurement": "gas",
+            "fields": {
+                "hourly_usage": hourly_gas.value,
+            },
+            "time": hourly_gas.timestamp.isoformat(),
+        }
+
+    def _get_electricity_data(self, telegram: Telegram) -> dict:
         timestamp = telegram.get_data_point(
             ObisCode.P1_MESSAGE_TIMESTAMP,
             DataPoint[CosemDatetime],
@@ -60,7 +85,7 @@ class InfluxDBHandler(AbstractHandler):
             DataPoint[int],
         )
 
-        data = {
+        return {
             "measurement": "electricity",
             "fields": {
                 "current_usage": current_usage.value,
@@ -70,8 +95,6 @@ class InfluxDBHandler(AbstractHandler):
             },
             "time": timestamp.value.isoformat(),
         }
-
-        await self.write_api.write(self.bucket, record=data)
 
 
 @asynccontextmanager

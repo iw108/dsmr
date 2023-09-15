@@ -66,9 +66,7 @@ class Telegram:
         for index in range(0, len(raw_data_points), 2):
             raw_timestamp, raw_data_point = raw_data_points[index : index + 2]
 
-            timepstamp = DataPoint[CosemDatetime](**raw_timestamp.__dict__)
-
             yield target_cls(
-                timestamp=timepstamp.value,
+                timestamp=raw_timestamp.value,
                 **raw_data_point.__dict__,
             )

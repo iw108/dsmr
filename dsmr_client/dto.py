@@ -14,7 +14,7 @@ class DataPoint(BaseModel, Generic[DataT]):
 
 
 class MbusDataPoint(DataPoint[DataT]):
-    timestamp: datetime
+    timestamp: "CosemDatetime"
 
 
 def parse_datetime(data: str):
