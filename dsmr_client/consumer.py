@@ -12,7 +12,7 @@ LOGGER = logging.getLogger(__name__)
 @dataclass(frozen=True, kw_only=True)
 class ConsumerOptions:
     queue_size: int = 20
-    handler_timeout: float = 10.
+    handler_timeout: float = 10.0
 
 
 class Consumer:
@@ -42,7 +42,7 @@ class Consumer:
 
             try:
                 await asyncio.wait_for(
-                    self.handler(telegram), 
+                    self.handler(telegram),
                     self.options.handler_timeout,
                 )
             except Exception as exc:
