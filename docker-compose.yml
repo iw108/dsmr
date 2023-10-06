@@ -4,6 +4,7 @@ services:
   dsmr_client:
     build: .
     image: dsmr_client
+    restart: on-failure
     environment:
       - TCP_HOST
       - TCP_PORT
