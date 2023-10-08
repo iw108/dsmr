@@ -34,8 +34,8 @@ async def main(
     )
 
     async with (
-        managed_influxdb_consumer(settings) as telegram_consumer,
         _managed_telegram_streamer as telegram_streamer,
+        managed_influxdb_consumer(settings) as telegram_consumer,
     ):
         loop.add_signal_handler(signal.SIGINT, telegram_streamer.stop)
 
