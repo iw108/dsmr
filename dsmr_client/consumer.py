@@ -38,7 +38,7 @@ class Consumer:
         while True:
             telegram = await self.queue.get()
 
-            LOGGER.info("Processing telegram: %s", telegram.id)
+            LOGGER.debug("Processing telegram: %s", telegram.id)
 
             try:
                 await asyncio.wait_for(
@@ -50,7 +50,7 @@ class Consumer:
 
             self.queue.task_done()
 
-            LOGGER.info("Processed telegram: %s", telegram.id)
+            LOGGER.debug("Processed telegram: %s", telegram.id)
 
     async def consume_stream(self, stream: TelegramStreamer):
         LOGGER.info("Consuming stream")

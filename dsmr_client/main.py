@@ -5,7 +5,7 @@ import os
 import signal
 from pathlib import Path
 
-from tenacity import retry, retry_if_exception_type, wait_fixed
+from tenacity import retry, retry_if_exception_type
 
 from .influxdb import managed_influxdb_consumer
 from .settings import Settings
@@ -20,10 +20,7 @@ def configure_logging(log_level: str):
     )
 
 
-@retry(
-    retry=retry_if_exception_type(ReadTimeout),
-    wait=wait_fixed(60),
-)
+@retry(retry=retry_if_exception_type(ReadTimeout))
 async def main(
     *,
     _settings: Settings | None = None,

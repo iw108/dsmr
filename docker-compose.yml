@@ -3,7 +3,7 @@ version: "3.8"
 services:
   dsmr_client:
     build: .
-    image: dsmr_client
+    image: ${DOCKER_IMAGE:-dsmr_client}
     restart: on-failure
     environment:
       - TCP_HOST
