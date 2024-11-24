@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Protocol, Type
+from typing import Protocol
 
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
 from influxdb_client.client.write_api_async import WriteApiAsync
 from pydantic import AnyHttpUrl
 
-from .consumer import Consumer
 from .dto import CosemDatetime, DataPoint, MbusDataPoint
 from .obis import ObisCode
 from .telegram import Telegram
@@ -20,6 +20,12 @@ class InfluxDBConfig(Protocol):
 
 
 class AbstractHandler(ABC):
+    @abstractmethod
+    async def __call__(self, telegram: Telegram) -> None:
+        """Handle call."""
+
+
+class InfluxDBHandler(AbstractHandler):
     def __init__(
         self,
         write_api: WriteApiAsync,
@@ -28,12 +34,6 @@ class AbstractHandler(ABC):
         self.write_api = write_api
         self.bucket = bucket
 
-    @abstractmethod
-    async def __call__(self, telegram: Telegram) -> None:
-        """Handle call."""
-
-
-class InfluxDBHandler(AbstractHandler):
     async def __call__(self, telegram: Telegram) -> None:
         gas_data = self._get_gas_data(telegram)
         electricity_data = self._get_electricity_data(telegram)
@@ -98,11 +98,9 @@ class InfluxDBHandler(AbstractHandler):
 
 
 @asynccontextmanager
-async def managed_influxdb_consumer(
+async def managed_influxdb_handler(
     config: InfluxDBConfig,
-    *,
-    _handler_cls: Type[AbstractHandler] = InfluxDBHandler,
-) -> AsyncGenerator[Consumer, None]:
+) -> AsyncGenerator[InfluxDBHandler, None]:
     influxdb_client = InfluxDBClientAsync(
         url=str(config.INFLUXDB_URL),
         token=config.INFLUXDB_TOKEN,
@@ -110,10 +108,7 @@ async def managed_influxdb_consumer(
     )
 
     async with influxdb_client:
-        handler = _handler_cls(
+        yield InfluxDBHandler(
             influxdb_client.write_api(),
             config.INFLUXDB_BUCKET,
         )
-
-        async with Consumer(handler) as consumer:
-            yield consumer

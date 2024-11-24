@@ -7,7 +7,7 @@ from pathlib import Path
 
 from tenacity import retry, retry_if_exception_type
 
-from .influxdb import managed_influxdb_consumer
+from .influxdb import managed_influxdb_handler
 from .settings import Settings
 from .streamer import ReadTimeout, managed_telegram_streamer
 
@@ -27,19 +27,23 @@ async def main(
     _loop: asyncio.AbstractEventLoop | None = None,
 ):
     settings = _settings or Settings()
+    stop_event = asyncio.Event()
+
     loop = _loop or asyncio.get_running_loop()
+    loop.add_signal_handler(signal.SIGINT, stop_event.set)
 
     _managed_telegram_streamer = managed_telegram_streamer(
-        settings.TCP_HOST, settings.TCP_PORT
+        settings.TCP_HOST,
+        settings.TCP_PORT,
+        stop_event=stop_event,
     )
 
     async with (
-        managed_influxdb_consumer(settings) as telegram_consumer,
-        _managed_telegram_streamer as telegram_streamer,
+        _managed_telegram_streamer as stream,
+        managed_influxdb_handler(settings) as handler,
     ):
-        loop.add_signal_handler(signal.SIGINT, telegram_streamer.stop)
-
-        await telegram_consumer.consume_stream(telegram_streamer)
+        async for telegram in stream:
+            await handler(telegram)
 
 
 if __name__ == "__main__":

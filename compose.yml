@@ -1,17 +1,19 @@
 version: "3.8"
 
 services:
-  dsmr_client:
+  dsmr-client:
     build: .
-    image: ${DOCKER_IMAGE:-dsmr_client}
+    command: ["python", "-m", "dsmr_client.main"]
     restart: on-failure
     environment:
       - TCP_HOST
-      - TCP_PORT
-      - INFLUXDB_BUCKET
-      - INFLUXDB_ORG
-      - INFLUXDB_TOKEN
+      - TCP_PORT=1234
+      - INFLUXDB_BUCKET=dsmr
+      - INFLUXDB_ORG=dsmr
+      - INFLUXDB_TOKEN=dsmr-token
       - INFLUXDB_URL=http://influxdb:8086
+    volumes:
+      - ./dsmr_client:/app/dsmr_client
     depends_on:
       influxdb:
         condition: service_healthy
@@ -22,9 +24,9 @@ services:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=dsmr
       - DOCKER_INFLUXDB_INIT_PASSWORD=dsmr-password
-      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG}
-      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET}
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
+      - DOCKER_INFLUXDB_INIT_ORG=dsmr
+      - DOCKER_INFLUXDB_INIT_BUCKET=dsmr
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=dsmr-token
       - DOCKER_INFLUXDB_INIT_RETENTION=3d
       - INFLUXD_REPORTING_DISABLED=true
     ports:
@@ -37,7 +39,7 @@ services:
       start_period: 30s
     volumes:
       - ./influxdb/scripts:/docker-entrypoint-initdb.d
-      - ${INFLUXDB_DATA_PATH:-influxdb_data}:/var/lib/influxdb2
+      - influxdb_data:/var/lib/influxdb2
 
   grafana:
     image: grafana/grafana-enterprise
@@ -48,9 +50,9 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
-      - INFLUXDB_BUCKET
-      - INFLUXDB_ORG
-      - INFLUXDB_TOKEN
+      - INFLUXDB_BUCKET=dsmr
+      - INFLUXDB_ORG=dsmr
+      - INFLUXDB_TOKEN=dsmr-token
     ports:
       - 3000:3000
     volumes:

@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.11]
+        python-version: [3.12]
         platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
@@ -21,11 +21,10 @@ jobs:
         run: |
           poetry env use ${{ matrix.python-version }} 
           poetry install
-      - name: Run black
-        run: poetry run black . --check
-      - name: Run isort
-        run: poetry run isort . --check-only
-      - name: Run mypy
+      - name: Formatting
+        run: poetry run ruff format --check
+      - name: Linting
+        run: poetry run ruff check
+      - name: Typing
         run: poetry run mypy .
-      - name: Run flake8
-        run: poetry run flake8 .
+  
