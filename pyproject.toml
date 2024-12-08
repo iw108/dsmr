@@ -1,23 +1,22 @@
-[tool.poetry]
-name = "dsmr_client"
+[project]
+name = "dsmr"
 version = "0.1.0"
-description = ""
-authors = ["Isaac Williams <isaac.andrew.williams@gmail.com>"]
+description = "Add your description here"
 readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "influxdb-client[async]>=1.48.0",
+    "pydantic-settings>=2.6.1",
+    "tenacity>=9.0.0",
+]
 
 
-[tool.poetry.dependencies]
-python = "^3.10"
-influxdb-client = {extras = ["async"], version = "^1.47.0"}
-pydantic = "^2.10.1"
-pydantic-settings = "^2.0.3"
-tenacity = "^8.2.3"
-
-
-[tool.poetry.group.dev.dependencies]
-mypy = "^1.5.1"
-ruff = "^0.8.0"
-types-influxdb-client = "^1.37.0.0"
+[dependency-groups]
+dev = [
+    "mypy>=1.13.0",
+    "ruff>=0.8.2",
+    "types-influxdb-client>=1.45.0.20240915",
+]
 
 
 [tool.mypy]
@@ -36,8 +35,3 @@ select = [
     "C4",  # flake8-comprehensions
     "UP",  # pyupgrade
 ]
-
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"

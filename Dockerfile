@@ -1,32 +1,31 @@
 # The builder image, used to build the virtual environment
-FROM python:3.12-bullseye AS builder
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm AS builder
 
-ENV POETRY_VERSION=1.4.2 \
-    POETRY_HOME=/opt/poetry \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_IN_PROJECT=1 \
-    POETRY_VIRTUALENVS_CREATE=1 \
-    POETRY_CACHE_DIR=/opt/.cache 
-
-ENV PATH=$POETRY_HOME/bin:$PATH
-
-RUN curl -sSL https://install.python-poetry.org | python3 - 
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
 WORKDIR /app
 
-COPY pyproject.toml poetry.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev
 
-RUN poetry install --without dev --no-root && rm -rf $POETRY_CACHE_DIR
 
-# The runtime image, used to just run the code provided its virtual environment
-FROM python:3.12-slim-bullseye AS runtime
-
-ENV VENV_PATH=/app/.venv
-ENV PATH=$VENV_PATH/bin:$PATH
-
-WORKDIR /app
-
-COPY --from=builder ${VENV_PATH} ${VENV_PATH}
+COPY ./pyproject.toml ./uv.lock /app/
 
 COPY ./dsmr_client /app/dsmr_client
 
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-editable
+
+
+# The runtime image, used to just run the code provided its virtual environment
+FROM python:3.12-slim-bookworm AS runtime
+
+ENV PATH=/app/.venv/bin:$PATH
+
+WORKDIR /app
+
+COPY --from=builder --chown=app:app /app /app
+
+CMD ["python", "-m", "dsmr_client.main"]

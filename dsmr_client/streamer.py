@@ -40,7 +40,7 @@ class TelegramStreamer:
                 self.reader.read(self.options.buffer_size),
                 self.options.read_timeout,
             )
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             LOGGER.info("Read timeout")
             raise ReadTimeout() from exc
         return data.decode()
