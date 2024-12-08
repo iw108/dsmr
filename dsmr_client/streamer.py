@@ -1,8 +1,8 @@
 import asyncio
 import logging
+from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import AsyncGenerator, AsyncIterator
 
 from .buffer import TelegramBuffer
 from .exceptions import ReadTimeout
@@ -25,13 +25,14 @@ class TelegramStreamer:
         reader: asyncio.StreamReader,
         *,
         streamer_options: StreamerOptions | None = None,
+        stop_event: asyncio.Event | None = None,
         _buffer: TelegramBuffer | None = None,
     ):
         self.reader = reader
-        self.options = streamer_options or StreamerOptions()
-        self.buffer = _buffer or TelegramBuffer()
 
-        self._is_streaming: bool = True
+        self.options = streamer_options or StreamerOptions()
+        self.stop_event = stop_event or asyncio.Event()
+        self.buffer = _buffer or TelegramBuffer()
 
     async def _read(self) -> str:
         try:
@@ -45,31 +46,27 @@ class TelegramStreamer:
         return data.decode()
 
     async def __aiter__(self) -> AsyncIterator[Telegram]:
-        while self._is_streaming:
+        while not self.stop_event.is_set():
             data = await self._read()
             self.buffer.append(data)
 
             for telegram in self.buffer.drain():
-                LOGGER.debug("Received telegram")
+                LOGGER.info("Received telegram")
                 yield telegram
-
-    def stop(self):
-        self._is_streaming = False
 
 
 @asynccontextmanager
 async def managed_telegram_streamer(
-    host: str,
-    port: int,
+    host: str, port: int, stop_event: asyncio.Event | None = None
 ) -> AsyncGenerator[TelegramStreamer, None]:
-    LOGGER.debug("Opening connection")
+    LOGGER.info("Opening connection")
 
     reader, writer = await asyncio.open_connection(host, port)
 
     LOGGER.info("Opened connection")
 
     try:
-        yield TelegramStreamer(reader)
+        yield TelegramStreamer(reader, stop_event=stop_event)
     finally:
         LOGGER.info("Closing streamer")
 

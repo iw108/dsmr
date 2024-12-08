@@ -1,6 +1,6 @@
 import re
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Generator, Type
 from uuid import uuid4
 
 from .dto import DataPoint, DataT, MbusDataPoint
@@ -29,7 +29,12 @@ class _TelegramEntry:
 
 
 class Telegram:
-    def __init__(self, data: str, *, _id: str | None = None):
+    def __init__(
+        self,
+        data: str,
+        *,
+        _id: str | None = None,
+    ):
         self._data = data
         self.id = _id or uuid4().hex[:6]
 
@@ -47,7 +52,7 @@ class Telegram:
     def get_data_point(
         self,
         obis_code: ObisCode,
-        target_cls: Type[DataPoint[DataT]],
+        target_cls: type[DataPoint[DataT]],
     ) -> DataPoint[DataT]:
         entry = self._get_entry(obis_code)
 
@@ -58,7 +63,7 @@ class Telegram:
     def get_mbus_data_points(
         self,
         obis_code: ObisCode,
-        target_cls: Type[MbusDataPoint[DataT]],
+        target_cls: type[MbusDataPoint[DataT]],
     ) -> Generator[MbusDataPoint[DataT], None, None]:
         entry = self._get_entry(obis_code)
 

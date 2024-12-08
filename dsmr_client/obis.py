@@ -12,3 +12,7 @@ class ObisCode(StrEnum):
     ELECTRICITY_ACTIVE_TARIFF = r"\d-\d:96\.14\.0"
 
     HOURLY_GAS_METER_READING = r"\d-\d:24\.2\.1"
+
+
+class MbusCode(StrEnum):
+    HOURLY_GAS_METER_READING = r"\d-\d:24\.2\.1"
