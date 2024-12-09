@@ -57,7 +57,9 @@ class TelegramStreamer:
 
 @asynccontextmanager
 async def managed_telegram_streamer(
-    host: str, port: int, stop_event: asyncio.Event | None = None
+    host: str,
+    port: int,
+    stop_event: asyncio.Event | None = None,
 ) -> AsyncGenerator[TelegramStreamer, None]:
     LOGGER.info("Opening connection")
 

@@ -2,6 +2,7 @@ version: "3.8"
 
 services:
   dsmr-client:
+    image: ${DOCKER_IMAGE:-dsmr_client}
     build: .
     command: ["python", "-m", "dsmr_client.main"]
     restart: on-failure
