@@ -2,7 +2,7 @@
 
 services:
   dsmr-client:
-    image: ${DOCKER_IMAGE:-dsmr_client}
+    image: ${DOCKER_IMAGE:-dsmr-client}
     build: .
     restart: on-failure
     environment:
