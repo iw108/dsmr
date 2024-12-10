@@ -1,10 +1,9 @@
-version: "3.8"
+---
 
 services:
   dsmr-client:
     image: ${DOCKER_IMAGE:-dsmr_client}
     build: .
-    command: ["python", "-m", "dsmr_client.main"]
     restart: on-failure
     environment:
       - TCP_HOST
@@ -13,8 +12,13 @@ services:
       - INFLUXDB_ORG=dsmr
       - INFLUXDB_TOKEN=dsmr-token
       - INFLUXDB_URL=http://influxdb:8086
-    volumes:
-      - ./dsmr_client:/app/dsmr_client
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./dsmr_client
+          target: /app/dsmr_client
+        - action: rebuild
+          path: ./pyproject.toml
     depends_on:
       influxdb:
         condition: service_healthy
