@@ -15,7 +15,7 @@ LOGGER = logging.getLogger(__name__)
 class StreamerOptions:
     """Configurable options for `TelegramStreamer`."""
 
-    buffer_size: int = 256
+    buffer_size: int = 1024
     read_timeout: int = 10
 
 
@@ -37,7 +37,7 @@ class TelegramStreamer:
     async def _read(self) -> str:
         try:
             data = await asyncio.wait_for(
-                self.reader.read(self.options.buffer_size),
+                self.reader.readexactly(self.options.buffer_size),
                 self.options.read_timeout,
             )
         except TimeoutError as exc:
